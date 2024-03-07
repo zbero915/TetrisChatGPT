@@ -1,0 +1,221 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+
+namespace Tetris
+{
+    class Program
+    {
+        static int width = 10;
+        static int height = 20;
+        static bool[,] grid = new bool[width, height];
+        static int currentX = width / 2;
+        static int currentY = 0;
+        static List<int[]> currentShape = new List<int[]>();
+        static Random random = new Random();
+        static bool gameOver = false;
+
+        static void Main(string[] args)
+        {
+            Console.CursorVisible = false;
+            Console.SetWindowSize(width * 2, height + 2);
+
+            while (!gameOver)
+            {
+                Draw();
+                Thread.Sleep(200);
+                ProcessInput();
+                MoveDown();
+            }
+
+            Console.WriteLine("Game Over!");
+            Console.ReadLine();
+        }
+
+        static void Draw()
+        {
+            Console.Clear();
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (grid[x, y])
+                    {
+                        Console.SetCursorPosition(x * 2, y);
+                        Console.Write("██");
+                    }
+                }
+            }
+
+            foreach (var point in currentShape)
+            {
+                Console.SetCursorPosition((currentX + point[0]) * 2, currentY + point[1]);
+                Console.Write("██");
+            }
+        }
+
+        static void ProcessInput()
+        {
+            if (Console.KeyAvailable)
+            {
+                var key = Console.ReadKey(true).Key;
+
+                switch (key)
+                {
+                    case ConsoleKey.LeftArrow:
+                        if (CanMove(currentX - 1, currentY, currentShape))
+                            currentX--;
+                        break;
+                    case ConsoleKey.RightArrow:
+                        if (CanMove(currentX + 1, currentY, currentShape))
+                            currentX++;
+                        break;
+                    case ConsoleKey.Spacebar:
+                        RotateShape();
+                        break;
+                }
+            }
+        }
+
+        static void MoveDown()
+        {
+            if (CanMove(currentX, currentY + 1, currentShape))
+                currentY++;
+            else
+            {
+                MergeShape();
+                CheckLines();
+                GenerateShape();
+            }
+        }
+
+        static bool CanMove(int x, int y, List<int[]> shape)
+        {
+            foreach (var point in shape)
+            {
+                int newX = currentX + point[0];
+                int newY = currentY + point[1];
+
+                if (newX < 0 || newX >= width || newY >= height || grid[newX, newY])
+                    return false;
+            }
+
+            return true;
+        }
+
+        static void MergeShape()
+        {
+            foreach (var point in currentShape)
+            {
+                grid[currentX + point[0], currentY + point[1]] = true;
+            }
+        }
+
+        static void CheckLines()
+        {
+            for (int y = height - 1; y >= 0; y--)
+            {
+                bool lineComplete = true;
+
+                for (int x = 0; x < width; x++)
+                {
+                    if (!grid[x, y])
+                    {
+                        lineComplete = false;
+                        break;
+                    }
+                }
+
+                if (lineComplete)
+                {
+                    for (int yy = y; yy > 0; yy--)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            grid[x, yy] = grid[x, yy - 1];
+                        }
+                    }
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        grid[x, 0] = false;
+                    }
+
+                    y++;
+                }
+            }
+        }
+
+        static void RotateShape()
+        {
+            List<int[]> newShape = new List<int[]>();
+
+            foreach (var point in currentShape)
+            {
+                int newX = -point[1];
+                int newY = point[0];
+                newShape.Add(new int[] { newX, newY });
+            }
+
+            if (CanMove(currentX, currentY, newShape))
+                currentShape = newShape;
+        }
+
+        static void GenerateShape()
+        {
+            currentX = width / 2;
+            currentY = 0;
+
+            currentShape.Clear();
+
+            int shapeIndex = random.Next(7);
+
+            switch (shapeIndex)
+            {
+                case 0: // I shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { 0, 2 });
+                    currentShape.Add(new int[] { 0, -1 });
+                    break;
+                case 1: // J shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { 0, 2 });
+                    currentShape.Add(new int[] { -1, 2 });
+                    break;
+                case 2: // L shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { 0, 2 });
+                    currentShape.Add(new int[] { 1, 2 });
+                    break;
+                case 3: // O shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { 1, 0 });
+                    currentShape.Add(new int[] { 1, 1 });
+                    break;
+                case 4: // S shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { 1, 1 });
+                    currentShape.Add(new int[] { -1, 0 });
+                    break;
+                case 5: // T shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { -1, 1 });
+                    currentShape.Add(new int[] { 1, 1 });
+                    break;
+                case 6: // Z shape
+                    currentShape.Add(new int[] { 0, 0 });
+                    currentShape.Add(new int[] { 0, 1 });
+                    currentShape.Add(new int[] { -1, 1 });
+                    currentShape.Add(new int[] { 1, 0 });
+                    break;
+            }
+        }
+    }
+}
